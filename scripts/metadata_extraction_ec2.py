@@ -44,8 +44,8 @@ def parse_data_from_pdf(absolute_file_path, key):
 # In[16]:
 
 
-data_directory_path = "D:/Sem1/INF551/Project/DeciQuest/data/finalmp3"
-output_path = "D:/Sem1/INF551/Project/DeciQuest/data/finalmp3/index"
+data_directory_path = "/home/ec2-user/project/DeciQuest/data/finalmp3"
+output_path = "/home/ec2-user/project/DeciQuest/data/finalmp3/index"
 if os.path.isdir(data_directory_path):
     for foldername in os.listdir(data_directory_path):
         key = foldername.split('.')[0]
