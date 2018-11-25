@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Deciquest
+    </title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" 
+    integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css?family=Oswald:700" rel="stylesheet"> 
+
+    <style>
+      
+      /* First come the styles which are used in the demo */
+
+      .facetsearch {
+        display: inline-block;
+        width: 200px;
+        vertical-align: top;
+        color: red;
+      }
+
+      .facetlist {
+        display: none;
+      }
+
+      .btn {
+        color: darkgray;
+        margin: 10px;
+        /* padding: 0px; */
+      }
+
+      sbtn {
+        background-color: rgb(55, 163, 122);
+      }
+      .activeorderby,
+      .activefacet {
+        color: green;
+      }
+      .bottomline {
+        padding: 10px 0 10px 0;
+        font-weight: bold;
+      }
+      .bottomline .orderby, 
+      .bottomline .facettotalcount {
+        display: inline-block;
+      }
+      .bottomline .orderby ul,
+      .bottomline .orderby li {
+        display: inline;
+        padding: 0;
+      }
+      .bottomline .orderby-title {
+        margin: 0 0 0 10px;
+      }
+      .bottomline .deselectstartover {
+        float: right;
+      }
+      #language {
+        width: 400px;
+      }
+      #language .facetlist{
+        column-count: 4;
+        -webkit-column-count: 4;
+        -moz-column-count: 4;
+        -o-column-count: 4;
+      }
+      .item {
+        width: 150px;
+        height: 350px;
+        margin: 0 10px 10px 0;
+        display: inline-block;
+        vertical-align: top;
+      }
+      .item h4 {
+        font-size: 1.2em;
+      }
+      .item .tags {
+        font-weight: bold;
+        color: gray;
+      }
+      #showmorebutton {
+        border: 1px solid #AAA;
+        border-radius: 15px;
+        background-color: #DDD;
+        margin: 0 0 10px 0;
+        padding: 10px;
+        width: fit-content;
+        display: block;
+        text-align: center;
+        cursor: pointer;
+      }
+
+      #showmore {
+        display: flex;
+        position: inherit;
+        clear: both;
+      }
+
+      /* These styles are just general purpose styles to make the page look a little less aweful */
+
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        padding: 20px;
+        font-family: sans-serif;
+        font-size: 14px;
+      }
+      #wrapper, #documentation {
+        margin: 0 auto;
+      }
+      p {
+        padding-bottom: 1em;
+        line-height: 1.3em;
+      }
+      h1, h2, h3{
+        margin: 0 0 1em 0;
+        font-family: Oswald;
+      }
+      tt {
+        background-color: #EEE;
+        border: 1px solid #CCC;
+      }
+    </style>
+  </head>
+  <body>
+    <div id=wrapper class="container">
+      <div id=description>
+        <div id="description" class="col-sm-4">
+          <h1><strong>Deciquest</strong></h1> 
+        </div>
+        <div id="description" class="row">
+          <input type="text" id="search" size=75>
+          <button class="btn btn-success">SEARCH</button>
+        </div>
+      </div>
+
+      <!-- Here comes the demo, if you want to copy and paste, start here -->
+      <div class="row">
+        <div class="col-sm-3" style="font-family: Oswald; font-size: 15px">
+          Filter By:
+          <div id=facets></div>
+        </div>
+        <div id=results class="col-sm-offset-2 col-sm-6"></div>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.6.2.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.1.7/underscore-min.js"></script>
+    <script src="facetedsearch.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.5.9/firebase.js"></script>
+
+    <!-- Firebase App -->
+    <script src="https://www.gstatic.com/firebasejs/5.5.9/firebase-app.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/5.5.9/firebase-database.js"></script>
+    <script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "AIzaSyAAOFkdX_BM1OShaQgEt3OVEAWdhJgNwfM",
+        authDomain: "deciquest.firebaseapp.com",
+        databaseURL: "https://deciquest.firebaseio.com",
+        projectId: "deciquest",
+        storageBucket: "deciquest.appspot.com",
+        messagingSenderId: "1036698576099"
+    };
+    // Firebase
+    firebase.initializeApp(config);
+
+    //Firebase Database
+    database = firebase.database();
+    var ref = database.ref().child('data');
+
+    ref.on('value', gotData, errData);
+    var items = [];
+    let searchArray = [];
+
+    function gotData(data) {
+        
+        var books = data.val();
+        var keys = Object.keys(books);
+
+        for(var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            var author, year, genre, storage_path_mp3, storage_path_pdf;
+            var object = {};
+            if(!books[key].metadata) {
+                continue;
+            }
+
+            if(books[key]["metadata"]["Author"]) {
+
+                author = books[key]["metadata"]["Author"];
+
+                if(author.slice(0, 13) == "delivered by ") {
+                    author = author.slice(13);
+                }
+
+                else if(author.slice(0) == "Franklin Delano Roosvelt") {
+                    author = "Franklin Delano Roosevelt";
+                }
+
+                else if(author.slice(0, 4) == "Have") {
+                    continue;
+                }
+                
+            }
+
+            if(books[key]["metadata"]["xmpDM:releaseDate"]) {
+                year = books[key]["metadata"]["xmpDM:releaseDate"].slice(0,4);
+                if(year > "2018") {
+                  continue;
+                }
+            }
+
+            if(books[key]["metadata"]["xmpDM:genre"] && (books[key]["metadata"]["xmpDM:genre"] == "Speech" || books[key]["metadata"]["xmpDM:genre"] == "Movie Speech")) {
+                genre = books[key]["metadata"]["xmpDM:genre"];
+            }
+
+            if(books[key]["storage-path-mp3"]) {
+                storage_path_mp3 = books[key]["storage-path-mp3"];
+            } 
+
+            if(books[key]["storage-path-pdf"]) {
+                storage_path_pdf = books[key]["storage-path-pdf"];
+            } 
+
+            object["Author"] = author;
+            object["Year"] = year;
+            object["Genre"] = genre;
+            object["mp3"] = storage_path_mp3;
+            object["pdf"] = storage_path_pdf;
+
+            items.push(object);
+        }
+
+        $.facetelize(settings);
+       //populateSearch();
+
+        $('.facetsearch').each(function() {
+          $(this).find("button").live('click', function(event) {        
+                 $(this).next('div').toggle('show');
+            });
+        });
+
+    }
+    
+    function errData(err) {
+        console.log(err);
+    }
+
+
+    </script>
+
+    <script>
+
+      $(function(){
+          var item_template = 
+           '<div class="item">' +
+            //  '<a href="<% if (obj.mp3) {  %><%= obj.mp3 %><% } %>">' +
+             '<img src="https://seeklogo.com/images/M/mp3-logo-35E79615F6-seeklogo.com.png" alt="Book Image" height=200 width=120>' +
+             '<p class="tags">' + 
+              'Author: <% if (obj.Author) {  %><%= obj.Author %><% } %>' +
+              '<br>' +
+              'Year: <% if (obj.Year) {  %> <%= obj.Year %><% } %>' +
+              '<br>' +
+              'Genre: <% if (obj.Genre) {  %> <%= obj.Genre %><% } %>' +
+              '<br>' +
+              '<a href=" <% if (obj.mp3) {  %><%= obj.mp3 %><% } %> "> mp3 link </a>' +
+              '<br>' +
+              '<a href=" <% if (obj.pdf) {  %><%= obj.pdf %><% } %> "> pdf link </a>' +
+             '</p>' +
+            //  '</a>' +
+             
+           '</div>';
+        settings = { 
+          items            : result_items,
+          facets           : { 
+                              'Author'     : 'AUTHOR',
+                              'Year'       : 'YEAR',
+                              'Genre'      : 'GENRE'
+          },  
+          resultSelector   : '#results',
+          facetSelector    : '#facets',
+          resultTemplate   : item_template,
+          paginationCount  : 30,
+          orderByOptions   : {'Genre': 'GENRE', 'Year': 'YEAR', 'Author': 'AUTHOR', 'RANDOM': 'RANDOM'},
+          // facetSortOption  : {'Genre': ["Movie Speech", "Speech"]}
+        }   
+      });
+    </script>
+
+    <script>
+        $('.fbtn').live('click', function(){
+          $(this).toggleClass('btn-default btn-success')
+        });
+        var result_items = items;
+        console.log(items);
+    </script>
+
+  <script>
+      var result_items = items;
+      console.log(items);
+
+      // Search Event Handling
+      const searchBox = document.querySelector('#search');
+      searchBox.addEventListener('keyup', () => {
+        const query = searchBox.value.split(' ');
+        console.log(query);
+        var search_results = [];
+
+        if(query.length !=0 && query[0] != "") {
+          items.forEach(el => {
+          let searchTerm = [];
+          for (let val of Object.values(el)) {
+            searchTerm = searchTerm.concat(String(val).toLowerCase().split(' '));
+          }
+          searchTerm.forEach(term => {
+                if (query.every(val => term.includes(val.toLowerCase()))) {
+                //console.log(el);
+                search_results. push(el);
+              }
+            });
+           });
+          var result_items = search_results;
+          console.log(result_items);
+        }
+        else {
+          var result_items = items;
+          console.log(result_items);
+        }
+
+        
+
+        var item_template = 
+           '<div class="item">' +
+            //  '<a href="<% if (obj.mp3) {  %><%= obj.mp3 %><% } %>">' +
+             '<img src="https://seeklogo.com/images/M/mp3-logo-35E79615F6-seeklogo.com.png" alt="Book Image" height=200 width=120>' +
+             '<p class="tags">' + 
+              'Author: <% if (obj.Author) {  %><%= obj.Author %><% } %>' +
+              '<br>' +
+              'Year: <% if (obj.Year) {  %> <%= obj.Year %><% } %>' +
+              '<br>' +
+              'Genre: <% if (obj.Genre) {  %> <%= obj.Genre %><% } %>' +
+              '<br>' +
+              '<a href=" <% if (obj.mp3) {  %><%= obj.mp3 %><% } %> "> mp3 link </a>' +
+              '<br>' +
+              '<a href=" <% if (obj.pdf) {  %><%= obj.pdf %><% } %> "> pdf link </a>' +
+             '</p>' +
+            //  '</a>' +
+             
+           '</div>';
+        settings = { 
+          items            : result_items,
+          facets           : { 
+                              'Author'     : 'AUTHOR',
+                              'Year'       : 'YEAR',
+                              'Genre'      : 'GENRE'
+          },  
+          resultSelector   : '#results',
+          facetSelector    : '#facets',
+          resultTemplate   : item_template,
+          paginationCount  : 30,
+          orderByOptions   : {'Genre': 'GENRE', 'Year': 'YEAR', 'Author': 'AUTHOR', 'RANDOM': 'RANDOM'},
+          // facetSortOption  : {'Genre': ["Movie Speech", "Speech"]}
+        }  
+
+        $.facetelize(settings);
+        //$.facetUpdate();
+
+        $('.facetsearch').each(function() {
+          $(this).find("button").live('click', function(event) {        
+                 $(this).next('div').toggle('show');
+            });
+        });
+
+         $('.fbtn').live('click', function(){
+          $(this).toggleClass('btn-default btn-success')
+        });
+      });
+  </script>
+
+    </div>
+  </body>
+</html>
